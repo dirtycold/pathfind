@@ -88,10 +88,6 @@ string FindExecutable()
 	path = do_NSGetExecutablePath();
 #elif defined (WIN32) // Windows
 	path = do_GetModuleFileNameW();
-#elif defined (BSD) // BSD variants
-	path = do_readlink("/proc/curproc/file");
-#elif defined (sun) || defined(__sun) // Solaris
-	path = do_readlink("/proc/self/path/a.out");
 #elif defined (__gnu_linux__)	// Linux
 	path = do_readlink("/proc/self/exe");
 #endif
