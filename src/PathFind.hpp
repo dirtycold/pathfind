@@ -27,6 +27,9 @@
 #include <string>
 using namespace std;
 
+namespace PathFind
+{
+
 #if defined (__APPLE__) || defined(MACOSX)	// Apple
 #include <mach-o/dyld.h>
 #elif defined (WIN32) // Windows
@@ -79,3 +82,5 @@ string FindExecutable()
 
 	return path;
 }
+
+} // namespace PathFind
