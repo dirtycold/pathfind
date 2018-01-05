@@ -29,55 +29,10 @@ using namespace std;
 
 #if defined (__APPLE__) || defined(MACOSX)	// Apple
 #include <mach-o/dyld.h>
-
-/// Find the path of the current executable using _NSGetExecutablePath (Apple/Mac)
-string do_NSGetExecutablePath()
-{
-#if defined (__APPLE__) || defined(MACOSX)	// Apple / OSX
-	char path[1024];
-	uint32_t size = sizeof(path);
-	if (_NSGetExecutablePath(path, &size) == 0)
-	    printf("executable path is %s\n", path);
-	else
-	    printf("buffer too small; need size %u\n", size);
-#else
-	string path = "";
-#endif
-
-	return string(path);
-}
-
 #elif defined (WIN32) // Windows
 // No includes necessary?
-
-/// Find the path of the current executable using GetModuleFileNameW (Windows)
-string do_GetModuleFileNameW()
-{
-#if defined (WIN32) // Windows
-	HMODULE hModule = GetModuleHandleW(NULL);
-	WCHAR path[MAX_PATH];
-	GetModuleFileNameW(hModule, path, MAX_PATH);
-#else
-	string path = "";
-#endif
-
-	return string(path);
-}
-
 #elif defined (BSD) || defined(__gnu_linux__) || defined(sun) || defined(__sun)	 // BSD, Linux, Solaris
 #include <unistd.h>
-
-/// Find the path of the current executable using do_readlink (BSD, Solaris, Linux)
-static string do_readlink(std::string const& path)
-{
-    char buff[1024];
-#if defined (BSD) || defined(__gnu_linux__) || defined(sun) || defined(__sun)	 // BSD, Linux, Solaris
-    ssize_t len = ::readlink(path.c_str(), buff, sizeof(buff)-1);
-#endif
-
-    return string(buff, len);
-}
-
 #endif
 
 string FindExecutable()
@@ -85,10 +40,40 @@ string FindExecutable()
 	string path;
 
 #if defined (__APPLE__) || defined(MACOSX)	// Apple / OSX
+
+    /// Find the path of the current executable using _NSGetExecutablePath (Apple/Mac)
+    auto do_NSGetExecutablePath = []() -> string
+    {
+        char path[1024];
+        uint32_t size = sizeof(path);
+        if (_NSGetExecutablePath(path, &size) == 0)
+            printf("executable path is %s\n", path);
+        else
+            printf("buffer too small; need size %u\n", size);
+        return string(path);
+    }
 	path = do_NSGetExecutablePath();
+
 #elif defined (WIN32) // Windows
+
+    /// Find the path of the current executable using GetModuleFileNameW (Windows)
+    auto do_GetModuleFileNameW = []() -> string
+    {
+        HMODULE hModule = GetModuleHandleW(NULL);
+        WCHAR path[MAX_PATH];
+        GetModuleFileNameW(hModule, path, MAX_PATH);
+        return string(path);
+    }
 	path = do_GetModuleFileNameW();
 #elif defined (__gnu_linux__)	// Linux
+    /// Find the path of the current executable using do_readlink (BSD, Solaris, Linux)
+    auto do_readlink = [](std::string const& path) -> string
+    {
+        char buff[1024];
+        ssize_t len = readlink(path.c_str(), buff, sizeof(buff)-1);
+        return string(buff, len);
+    };
+
 	path = do_readlink("/proc/self/exe");
 #endif
 
