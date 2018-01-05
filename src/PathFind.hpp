@@ -75,7 +75,7 @@ static string do_readlink(std::string const& path)
     ssize_t len = ::readlink(path.c_str(), buff, sizeof(buff)-1);
 #endif
 
-    return string(buff);
+    return string(buff, len);
 }
 
 #endif
