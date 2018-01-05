@@ -24,18 +24,77 @@
  *  License along with LIBOI.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#if defined (__APPLE__) || defined(MACOSX)	// Apple
-#include <mach-o/dyld.h>
-#elif defined (WIN32) // Windows
-// No includes necessary?
-#elif defined (BSD) || defined(__gnu_linux__) || defined(sun) || defined(__sun)	 // BSD, Linux, Solaris
-#include <unistd.h>
-#endif
-
 #include <string>
 using namespace std;
 
-string do_GetModuleFileNameW();
-string do_NSGetExecutablePath();
-string do_readlink(std::string const& path);
-string FindExecutable();
+#if defined (__APPLE__) || defined(MACOSX)	// Apple
+#include <mach-o/dyld.h>
+
+/// Find the path of the current executable using _NSGetExecutablePath (Apple/Mac)
+string do_NSGetExecutablePath()
+{
+#if defined (__APPLE__) || defined(MACOSX)	// Apple / OSX
+	char path[1024];
+	uint32_t size = sizeof(path);
+	if (_NSGetExecutablePath(path, &size) == 0)
+	    printf("executable path is %s\n", path);
+	else
+	    printf("buffer too small; need size %u\n", size);
+#else
+	string path = "";
+#endif
+
+	return string(path);
+}
+
+#elif defined (WIN32) // Windows
+// No includes necessary?
+
+/// Find the path of the current executable using GetModuleFileNameW (Windows)
+string do_GetModuleFileNameW()
+{
+#if defined (WIN32) // Windows
+	HMODULE hModule = GetModuleHandleW(NULL);
+	WCHAR path[MAX_PATH];
+	GetModuleFileNameW(hModule, path, MAX_PATH);
+#else
+	string path = "";
+#endif
+
+	return string(path);
+}
+
+#elif defined (BSD) || defined(__gnu_linux__) || defined(sun) || defined(__sun)	 // BSD, Linux, Solaris
+#include <unistd.h>
+
+/// Find the path of the current executable using do_readlink (BSD, Solaris, Linux)
+static string do_readlink(std::string const& path)
+{
+    char buff[1024];
+#if defined (BSD) || defined(__gnu_linux__) || defined(sun) || defined(__sun)	 // BSD, Linux, Solaris
+    ssize_t len = ::readlink(path.c_str(), buff, sizeof(buff)-1);
+#endif
+
+    return string(buff);
+}
+
+#endif
+
+string FindExecutable()
+{
+	string path;
+
+#if defined (__APPLE__) || defined(MACOSX)	// Apple / OSX
+	path = do_NSGetExecutablePath();
+#elif defined (WIN32) // Windows
+	path = do_GetModuleFileNameW();
+#elif defined (BSD) // BSD variants
+	path = do_readlink("/proc/curproc/file");
+#elif defined (sun) || defined(__sun) // Solaris
+	path = do_readlink("/proc/self/path/a.out");
+#elif defined (__gnu_linux__)	// Linux
+	path = do_readlink("/proc/self/exe");
+#endif
+
+	return path;
+}
